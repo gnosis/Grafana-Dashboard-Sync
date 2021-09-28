@@ -21,6 +21,8 @@ OPTIONS:
         --source-url <source-url>
 ```
 
+The destination dashboard will either be created from scratch if it does not yet exist or will have its version incremented so that the previous version remains accesssible in the Grafana history.
+
 ## Example
 
 You have a dashboard accessible at url https://dashboard.staging/d/3Z-RJHuGz/dashboard that you would like to copy to a second Grafana instance at https://dashboard.production .
