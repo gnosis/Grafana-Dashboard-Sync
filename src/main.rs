@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::{anyhow, Context, Result};
 use reqwest::{Client, StatusCode, Url};
@@ -9,34 +9,38 @@ use structopt::StructOpt;
 #[derive(StructOpt)]
 #[structopt(about = "Copy a Grafana dashboard from one instance to another.")]
 struct Opt {
-    #[structopt(long)]
-    source_url: Url,
-    #[structopt(long)]
+    /// Path to config file.
+    #[structopt(long, parse(from_os_str))]
+    config: PathBuf,
+}
+
+#[derive(Deserialize)]
+struct Config {
+    source_url: String,
     source_api_key: String,
-    #[structopt(long)]
-    destination_url: Url,
-    #[structopt(long)]
+    source_dashboard_uid: String,
+    destination_url: String,
     destination_api_key: String,
-    #[structopt(long)]
-    dashboard_uid: String,
 }
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<()> {
     let opt = Opt::from_args();
+    let config = std::fs::read_to_string(opt.config).context("read config file")?;
+    let config: Config = toml::de::from_str(&config).context("parse config")?;
     let client = Client::new();
     let api_staging = Api {
         client: client.clone(),
-        base: opt.source_url,
-        access_key: opt.source_api_key,
+        base: config.source_url.parse().context("source url")?,
+        access_key: config.source_api_key,
     };
     let api_prod = Api {
         client: client.clone(),
-        base: opt.destination_url,
-        access_key: opt.destination_api_key,
+        base: config.destination_url.parse().context("destination url")?,
+        access_key: config.destination_api_key,
     };
     let source = api_staging
-        .get_dashboard(&opt.dashboard_uid)
+        .get_dashboard(&config.source_dashboard_uid)
         .await
         .context("get dashboard from source instance")?
         .ok_or_else(|| anyhow!("dashboard not found in source instance"))?;

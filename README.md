@@ -7,32 +7,28 @@ grafana-dashboard-sync 0.1.0
 Copy a Grafana dashboard from one instance to another.
 
 USAGE:
-    grafana-dashboard-sync --dashboard-uid <dashboard-uid> --destination-api-key <destination-api-key> --destination-url <destination-url> --source-api-key <source-api-key> --source-url <source-url>
+    grafana-dashboard-sync --config <config>
 
 FLAGS:
     -h, --help       Prints help information
     -V, --version    Prints version information
 
 OPTIONS:
-        --dashboard-uid <dashboard-uid>
-        --destination-api-key <destination-api-key>
-        --destination-url <destination-url>
-        --source-api-key <source-api-key>
-        --source-url <source-url>
+        --config <config>
 ```
+
+The `config` argument is a path to a config file that like
+
+```toml
+source_url = "https://dashboard.staging"
+source_api_key: "api-key",
+source_dashboard_uid: "3Z-RJHuGz",
+destination_url: "https://dashboard.prod",
+destination_api_key: "api-key,
+```
+
+The uid refers to https://grafana.com/docs/grafana/latest/http_api/dashboard/#identifier-id-vs-unique-identifier-uid and can be seen in the browser url.
+
+The api keys can be configured in the Grafana web interface through `Configuration -> API Keys`.
 
 The destination dashboard will either be created from scratch if it does not yet exist or will have its version incremented so that the previous version remains accesssible in the Grafana history.
-
-## Example
-
-You have a dashboard accessible at url https://dashboard.staging/d/3Z-RJHuGz/dashboard that you would like to copy to a second Grafana instance at https://dashboard.production .
-
-To find the [uid](https://grafana.com/docs/grafana/latest/http_api/dashboard/#identifier-id-vs-unique-identifier-uid) we look at the dashboard url. In this case it is `3Z-RJHuGz`.
-
-In order to programmatically access the Grafana instances we need to set up api keys through `Configuration -> API Keys` for both instances.
-
-Now we can run the application:
-
-```
-cargo run -- --dashboard-uid 3Z-RJHuGz --source-url https://dashboard.staging --source-api-key {api-key} --destination-url https://dashboard.prod --destination-api-key {api-key}
-```
