@@ -18,9 +18,14 @@ struct Opt {
 struct Config {
     source_url: String,
     source_api_key: String,
-    source_dashboard_uid: String,
     destination_url: String,
     destination_api_key: String,
+    dashboards: Vec<DashboardConfig>,
+}
+
+#[derive(Deserialize)]
+struct DashboardConfig {
+    uid: String,
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -39,14 +44,17 @@ async fn main() -> Result<()> {
         base: config.destination_url.parse().context("destination url")?,
         access_key: config.destination_api_key,
     };
-    let source = api_staging
-        .get_dashboard(&config.source_dashboard_uid)
-        .await
-        .context("get dashboard from source instance")?
-        .ok_or_else(|| anyhow!("dashboard not found in source instance"))?;
-    create_or_update(source, &api_prod)
-        .await
-        .context("create or update")?;
+    for dashboard in &config.dashboards {
+        println!("handling uid {}", dashboard.uid);
+        let source = api_staging
+            .get_dashboard(&dashboard.uid)
+            .await
+            .context("get dashboard from source instance")?
+            .ok_or_else(|| anyhow!("dashboard not found in source instance"))?;
+        create_or_update(source, &api_prod)
+            .await
+            .context("create or update")?;
+    }
     Ok(())
 }
 
