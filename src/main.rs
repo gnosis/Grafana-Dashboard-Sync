@@ -1,12 +1,11 @@
-use std::{collections::HashMap, path::PathBuf};
-
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use reqwest::{Client, StatusCode, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::{collections::HashMap, path::PathBuf};
 use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 #[structopt(about = "Copy a Grafana dashboard from one instance to another.")]
 struct Opt {
     /// Path to config file.
@@ -14,16 +13,17 @@ struct Opt {
     config: PathBuf,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Config {
     source_url: String,
     source_api_key: String,
     destination_url: String,
     destination_api_key: String,
     dashboards: Vec<DashboardConfig>,
+    notifications: HashMap<String, String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct DashboardConfig {
     uid: String,
 }
@@ -45,15 +45,36 @@ async fn main() -> Result<()> {
         access_key: config.destination_api_key,
     };
     for dashboard in &config.dashboards {
-        println!("handling uid {}", dashboard.uid);
-        let source = api_staging
+        println!("handling dashboard uid {}", dashboard.uid);
+        let mut source = api_staging
             .get_dashboard(&dashboard.uid)
             .await
             .context("get dashboard from source instance")?
             .ok_or_else(|| anyhow!("dashboard not found in source instance"))?;
+        map_notifications(&mut source.dashboard, &config.notifications)?;
         create_or_update(source, &api_prod)
             .await
             .context("create or update")?;
+    }
+    Ok(())
+}
+
+fn map_notifications(dashboard: &mut Dashboard, map: &HashMap<String, String>) -> Result<()> {
+    fn error(uid: &str) -> String {
+        format!("Refusing to copy dashboard because it contains an unmapped notification uid {}. Please map
+        it in the config file.", uid)
+    }
+    for notification in dashboard
+        .panels
+        .iter_mut()
+        .flat_map(|panel| panel.alert.iter_mut())
+        .flat_map(|alert| alert.notifications.iter_mut())
+    {
+        let uid = &mut notification.uid;
+        match map.get(uid) {
+            Some(mapped) => *uid = mapped.clone(),
+            None => bail!(error(uid)),
+        }
     }
     Ok(())
 }
@@ -100,6 +121,29 @@ struct Dashboard {
     id: Option<u32>,
     uid: String,
     version: u32,
+    panels: Vec<Panel>,
+    #[serde(flatten)]
+    rest: HashMap<String, Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Panel {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    alert: Option<Alert>,
+    #[serde(flatten)]
+    rest: HashMap<String, Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Alert {
+    notifications: Vec<Notification>,
+    #[serde(flatten)]
+    rest: HashMap<String, Value>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Notification {
+    uid: String,
     #[serde(flatten)]
     rest: HashMap<String, Value>,
 }

@@ -19,8 +19,4 @@ OPTIONS:
 
 The `config` argument is a path to a config file like the [example](config.toml).
 
-The uid refers to https://grafana.com/docs/grafana/latest/http_api/dashboard/#identifier-id-vs-unique-identifier-uid and can be seen in the browser url.
-
-The api keys can be configured in the Grafana web interface through `Configuration -> API Keys`.
-
-The destination dashboard will either be created from scratch if it does not yet exist or will have its version incremented so that the previous version remains accesssible in the Grafana history.
+The destination dashboard will either be created from scratch if it does not yet exist or will have its version incremented so that the previous version remains accessible in the Grafana history.
