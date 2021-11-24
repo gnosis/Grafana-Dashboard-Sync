@@ -1,0 +1,24 @@
+# The source Grafana instance from which dashboards are read.
+source_url = "https://dashboard.staging"
+# Can be configured in the Grafana web interface through `Configuration -> API Keys`.
+source_api_key = "api-key"
+# The destination Grafana instance to which dashboards are written.
+destination_url = "https://dashboard.prod"
+destination_api_key = "api-key"
+
+# A dashboard that is read from the source and written to the destination.
+[[dashboards]]
+# The uid refers to https://grafana.com/docs/grafana/latest/http_api/dashboard/#identifier-id-vs-unique-identifier-uid
+uid = "first dashboard uid"
+
+[[dashboards]]
+uid = "second dashboard ui"
+
+# Notifcations can be configured on alerts in Grafana. They are things like Slack channels to which
+# messages get posted when an alert fires.
+# The non visible uid of these channels might not match between the instances. To fix this we
+# configure a mapping of source uids to destination uids. The uids can be found by querying https://dashboard.staging/api/alert-notifications .
+# If the uid does not exist on the destination, Grafana will show an error message when trying to
+# edit a panel's alert configuration.
+[notifications]
+"source uid" = "destination uid"
